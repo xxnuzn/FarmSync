@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>회원가입 — 팜싱크 FarmSync</title>
+<link rel="stylesheet" href="assets/css/app.css?v=9">
+<script src="assets/js/resilient.js?v=22"></script>
+</head>
+<body>
+
+<div class="authwrap">
+  <div class="authcard wide">
+    <div class="brandline">팜싱크 FarmSync</div>
+    <h1>회원가입</h1>
+    <p class="sub">농장주와 기업은 가입 항목이 다릅니다. 해당하는 유형을 선택해 주세요.</p>
+
+    <div class="notice bad" id="notice"></div>
+
+    <div class="roles">
+      <div class="role" data-role="farmer" id="roleFarmer">
+        <b>농장주</b>
+        <span>농장명 · 지역 · 주요 품목을 등록하고 기업 담당자와 납품을 협의합니다</span>
+      </div>
+      <div class="role" data-role="buyer" id="roleBuyer">
+        <b>기업</b>
+        <span>기업명 · 부서 · 직책을 등록하고 농장주와 매입을 협의합니다</span>
+      </div>
+    </div>
+    <div class="err" id="e_role" style="margin-top:-16px;margin-bottom:16px"></div>
+
+    <form id="signupForm" novalidate>
+      <!-- 공통 -->
+      <div class="row2">
+        <div class="fld">
+          <label class="f" for="login_id">아이디 <em>*</em></label>
+          <input type="text" id="login_id" autocomplete="username" placeholder="영문·숫자 4~20자">
+          <div class="err" id="e_login_id"></div>
+        </div>
+        <div class="fld">
+          <label class="f" for="name" id="lbl_name">이름 <em>*</em></label>
+          <input type="text" id="name" autocomplete="name" placeholder="실명">
+          <div class="err" id="e_name"></div>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="fld">
+          <label class="f" for="password">비밀번호 <em>*</em></label>
+          <input type="password" id="password" autocomplete="new-password" placeholder="6자 이상">
+          <div class="err" id="e_password"></div>
+        </div>
+        <div class="fld">
+          <label class="f" for="password2">비밀번호 확인 <em>*</em></label>
+          <input type="password" id="password2" autocomplete="new-password" placeholder="다시 입력">
+          <div class="err" id="e_password2"></div>
+        </div>
+      </div>
+
+      <!-- 농장주 전용 -->
+      <fieldset id="farmerFields" style="display:none;border:0;padding:0;margin:0 0 4px">
+        <div class="row2">
+          <div class="fld">
+            <label class="f" for="farm_name">농장명 <em>*</em></label>
+            <input type="text" id="farm_name" placeholder="예) 초록들녘 농장">
+            <div class="err" id="e_farm_name"></div>
+          </div>
+          <div class="fld">
+            <label class="f" for="region">지역 <em>*</em></label>
+            <input type="text" id="region" placeholder="예) 강원 평창">
+            <div class="err" id="e_region"></div>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="fld">
+            <label class="f" for="crops">주요 품목 <em>*</em></label>
+            <input type="text" id="crops" placeholder="예) 상추, 토마토">
+            <div class="err" id="e_crops"></div>
+          </div>
+          <div class="fld">
+            <label class="f" for="area">재배 면적</label>
+            <input type="text" id="area" placeholder="예) 1,200㎡">
+            <div class="err" id="e_area"></div>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- 기업 전용 -->
+      <fieldset id="buyerFields" style="display:none;border:0;padding:0;margin:0 0 4px">
+        <div class="row2">
+          <div class="fld">
+            <label class="f" for="company">기업명 <em>*</em></label>
+            <input type="text" id="company" placeholder="예) 한빛유통">
+            <div class="err" id="e_company"></div>
+          </div>
+          <div class="fld">
+            <label class="f" for="position">직책</label>
+            <input type="text" id="position" placeholder="예) 구매팀 과장">
+            <div class="err" id="e_position"></div>
+          </div>
+        </div>
+        <div class="fld">
+          <label class="f" for="dept">부서</label>
+          <input type="text" id="dept" placeholder="예) 구매팀">
+          <div class="err" id="e_dept"></div>
+        </div>
+      </fieldset>
+
+      <div class="fld">
+        <label class="f" for="phone">연락처</label>
+        <input type="tel" id="phone" placeholder="010-0000-0000">
+        <div class="hint">상대가 납품·매입 문의를 할 때 참고합니다.</div>
+      </div>
+
+      <button class="btn solid" type="submit" id="submitBtn" style="width:100%;margin-top:8px">가입하고 시작하기</button>
+    </form>
+
+    <div class="authfoot">
+      이미 계정이 있으신가요? <a href="/login">로그인</a><br>
+      <span style="display:inline-block;margin-top:10px"><a href="/" style="color:var(--ink-3)">← 메인으로</a></span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var role = "";
+  var notice = document.getElementById("notice");
+  var form = document.getElementById("signupForm");
+  var btn = document.getElementById("submitBtn");
+
+  var FARMER_FIELDS = ["farm_name", "region", "crops", "area"];
+  var BUYER_FIELDS = ["company", "dept", "position"];
+  var COMMON = ["login_id", "name", "password", "password2", "phone"];
+
+  function setRole(r) {
+    role = r;
+    document.getElementById("roleFarmer").classList.toggle("on", r === "farmer");
+    document.getElementById("roleBuyer").classList.toggle("on", r === "buyer");
+    document.getElementById("farmerFields").style.display = r === "farmer" ? "block" : "none";
+    document.getElementById("buyerFields").style.display = r === "buyer" ? "block" : "none";
+    document.getElementById("lbl_name").innerHTML = r === "buyer"
+      ? '담당자 성명 <em>*</em>' : '농장주 성명 <em>*</em>';
+    document.getElementById("e_role").textContent = "";
+  }
+  document.getElementById("roleFarmer").addEventListener("click", function () { setRole("farmer"); });
+  document.getElementById("roleBuyer").addEventListener("click", function () { setRole("buyer"); });
+
+  function clearErrors() {
+    Array.prototype.forEach.call(document.querySelectorAll(".err"), function (e) { e.textContent = ""; });
+    notice.classList.remove("show");
+  }
+  function fail(field, msg) {
+    var e = document.getElementById("e_" + field);
+    if (e) e.textContent = msg;
+  }
+
+  form.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    clearErrors();
+
+    if (!role) { document.getElementById("e_role").textContent = "농장주 또는 기업을 선택하세요"; return; }
+
+    var payload = { role: role };
+    COMMON.concat(FARMER_FIELDS, BUYER_FIELDS).forEach(function (k) {
+      var el = document.getElementById(k);
+      if (el) payload[k] = el.value.trim();
+    });
+
+    // 즉시 검증 (서버도 같은 규칙으로 다시 검증한다)
+    var bad = false;
+    if (!/^[A-Za-z0-9_]{4,20}$/.test(payload.login_id)) { fail("login_id", "아이디는 영문·숫자·밑줄 4~20자입니다"); bad = true; }
+    if (!payload.name) { fail("name", "이름을 입력하세요"); bad = true; }
+    if (payload.password.length < 6) { fail("password", "비밀번호는 6자 이상이어야 합니다"); bad = true; }
+    if (payload.password !== payload.password2) { fail("password2", "비밀번호가 서로 다릅니다"); bad = true; }
+    if (role === "farmer") {
+      if (!payload.farm_name) { fail("farm_name", "농장명을 입력하세요"); bad = true; }
+      if (!payload.region) { fail("region", "지역을 입력하세요"); bad = true; }
+      if (!payload.crops) { fail("crops", "주요 품목을 입력하세요"); bad = true; }
+    } else {
+      if (!payload.company) { fail("company", "기업명을 입력하세요"); bad = true; }
+    }
+    if (bad) return;
+
+    btn.disabled = true;
+    btn.textContent = "가입 중…";
+
+    fetch("/api/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok || !res.j.ok) {
+          if (res.j.errors) {
+            Object.keys(res.j.errors).forEach(function (k) { fail(k, res.j.errors[k]); });
+          }
+          notice.textContent = res.j.detail || "가입에 실패했습니다";
+          notice.classList.add("show");
+          btn.disabled = false;
+          btn.textContent = "가입하고 시작하기";
+          return;
+        }
+        location.href = res.j.next || "/app";
+      })
+      .catch(function () {
+        notice.textContent = "서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+        notice.classList.add("show");
+        btn.disabled = false;
+        btn.textContent = "가입하고 시작하기";
+      });
+  });
+})();
+</script>
+</body>
+</html>

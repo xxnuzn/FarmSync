@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>팜싱크 FarmSync — 신호가 끊겨도 주문은 끊기지 않습니다</title>
+<meta name="description" content="농장주와 기업 구매담당자가 납품을 협의하는 채팅 프로그램. 회선이 끊겨도 메시지는 유실·중복·순서 뒤바뀜 없이 이어집니다.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/site.css?v=11">
+</head>
+<body>
+
+<nav>
+  <div class="logo"><i></i>팜싱크 <em>FARMSYNC</em></div>
+  <div class="cta"><a class="ghost" href="/signup">회원가입</a><a class="solid" href="/login">로그인</a></div>
+</nav>
+
+<section class="hero">
+  <div>
+    <div class="eyebrow">납품 협의 채팅</div>
+    <h1>신호가 <em>끊겨도</em><br>주문은 끊기지<br>않습니다</h1>
+    <p class="lede">농장주와 기업 구매담당자가 납품을 협의하는 채팅 프로그램입니다. 회선이 끊겨도 <b>메시지는 사라지지 않고, 순서는 뒤바뀌지 않으며, 같은 주문이 두 번 저장되지 않습니다.</b></p>
+    <div class="acts">
+      <a class="btn solid" href="/signup">회원가입</a>
+      <a class="btn ghost" href="/login">로그인</a>
+    </div>
+  </div>
+
+  <div class="preview">
+    <div class="desk">
+      <div class="deskbar">
+        <span class="tl"></span><span class="tl"></span><span class="tl"></span>
+        <span class="ttl">팜싱크 — 납품 협의</span>
+        <span class="conn">● 오프라인 · 큐 2건</span>
+      </div>
+      <div class="addr">https://farmsync.app/chat/한빛유통</div>
+      <div class="deskbody">
+        <aside class="pane-list">
+          <div class="ph">대화</div>
+          <div class="thread on">
+            <b>한빛유통 구매팀</b>
+            <span>300kg 확정. 화요일 출하…</span>
+            <em>2</em>
+          </div>
+          <div class="thread">
+            <b>물류 담당</b>
+            <span>차량 배차 완료</span>
+          </div>
+          <div class="thread">
+            <b>공동출하방</b>
+            <span>출하 일정 공지</span>
+          </div>
+          <div class="ph mt">접속 상태</div>
+          <div class="who"><i class="on"></i>농장주 <u>나</u></div>
+          <div class="who"><i class="on"></i>기업 담당</div>
+          <div class="who"><i class="off"></i>물류 담당</div>
+        </aside>
+        <section class="pane-chat">
+          <header class="chd">
+            <div><b>한빛유통 구매팀</b><span>납품 협의 · 담당 김서연</span></div>
+            <em>seq 12</em>
+          </header>
+          <div class="stream">
+            <div class="m them">다음 주 상추 300kg 가능하실까요?</div>
+            <div class="m me">400kg까지 가능합니다. 3,200원/kg으로 드릴게요.<span class="st">✓ 서버 저장 · seq 12</span></div>
+            <div class="m them">좋습니다. 300kg 확정할게요.</div>
+            <div class="snote">회선 끊김 09:12 — 보낸 메시지는 기기에 보관됩니다</div>
+            <div class="m me">300kg 확정. 화요일 오전 출하로 잡겠습니다.<span class="st w">◷ 대기 중 · 로컬 큐</span></div>
+          </div>
+          <div class="composer"><div class="in">메시지 입력</div><div class="go">↑</div></div>
+        </section>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="how">
+  <div class="howtop">
+    <div class="eyebrow">사용방법</div>
+    <h2>가입해서 대화까지, 네 단계</h2>
+    <p class="note">농장주와 기업 담당자가 서로를 찾아 납품을 협의하는 순서입니다.</p>
+  </div>
+  <ol class="howsteps">
+    <li class="on">
+      <div class="n">STEP 01</div>
+      <h3>회원가입</h3>
+      <p>농장주 또는 기업을 고르고 가입합니다. 농장주는 농장명·지역·주요 품목을, 기업은 기업명·부서·직책을 등록합니다.</p>
+    </li>
+    <li>
+      <div class="n">STEP 02</div>
+      <h3>상대 찾기</h3>
+      <p>이름·농장명·기업명·지역으로 상대를 검색하고 친구 요청을 보냅니다. 상대가 수락하면 대화방이 열립니다.</p>
+    </li>
+    <li>
+      <div class="n">STEP 03</div>
+      <h3>납품 협의</h3>
+      <p>친구 목록에서 상대를 선택해 수량·단가·출하일을 협의합니다. 접속 중인 상대는 목록에 표시됩니다.</p>
+    </li>
+    <li>
+      <div class="n">STEP 04</div>
+      <h3>끊겨도 그대로</h3>
+      <p>오프라인 중 보낸 메시지는 기기의 로컬 큐에 남습니다. 다시 연결되면 밀린 대화만 받아 중복 없이 이어 붙입니다.</p>
+    </li>
+  </ol>
+  <div class="howcta">
+    <a class="btn solid" href="/signup">회원가입</a>
+    <a class="btn ghost" href="/login">로그인</a>
+  </div>
+  <div class="howfoot">
+    <b>준비물은 없습니다.</b> 브라우저만 있으면 되고, 설치는 필요하지 않습니다. 회원가입 후 <b>친구 목록</b>에서 상대를 추가하면 바로 대화를 시작할 수 있습니다.
+  </div>
+</section>
+
+<footer>
+  <span>팜싱크 FARMSYNC</span>
+  <span>컴퓨터네트워크 기말 프로젝트</span>
+  <span class="r">클라이언트–서버 구조</span>
+</footer>
+
+<script>
+/* 화면 구성은 그대로 두고 움직임만 더한다 — 스크립트가 없거나 실패하면 원래 정적인 화면 그대로 보인다 */
+(function () {
+  "use strict";
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------------------------------------------- 제목·버튼·목업이 차례로 등장 */
+  function reveal(list) {
+    list.forEach(function (el, i) {
+      if (!el) return;
+      el.style.setProperty("--d", (i * 90) + "ms");
+      el.classList.add("rv");
+    });
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        list.forEach(function (el, i) { if (el) setTimeout(function () { el.classList.add("in"); }, 40 + i * 20); });
+      });
+    });
+  }
+  function revealOnScroll(list) {
+    if (!("IntersectionObserver" in window)) { list.forEach(function (el) { if (el) el.classList.add("in"); }); return; }
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
+    }, { rootMargin: "0px 0px -6% 0px", threshold: 0.1 });
+    list.forEach(function (el) { if (el) io.observe(el); });
+  }
+  if (!reduce) {
+    reveal([].slice.call(document.querySelectorAll(".hero .eyebrow, .hero h1, .hero .lede, .hero .acts, .hero .preview")));
+    var below = [].slice.call(document.querySelectorAll(".how .howtop, .how .howsteps li, .how .howcta, .how .howfoot"));
+    below.forEach(function (el, i) { el.style.setProperty("--d", ((i % 4) * 90) + "ms"); el.classList.add("rv"); });
+    revealOnScroll(below);
+    /* 안전장치: 스크롤하지 않아도 3.6초 뒤에는 아래 내용이 모두 보이게 한다 (화면 캡처·발표 자료 대비) */
+    setTimeout(function () { below.forEach(function (el) { if (el) el.classList.add("in"); }); }, 3600);
+  }
+
+  /* ---------------------------------------------- 히어로 목업 : 회선이 끊겼다 이어지는 과정
+     메시지·대화 목록은 처음부터 그대로 보이고, 회선 상태와 저장 표시만 바뀐다 (빈 화면이 되지 않는다) */
+  var prev = document.querySelector(".preview");
+  if (!prev || reduce) return;
+  var conn = prev.querySelector(".deskbar .conn");
+  var stream = prev.querySelector(".stream");
+  if (!conn || !stream) return;
+
+  var msgs = [].slice.call(stream.querySelectorAll(".m"));
+  var snote = stream.querySelector(".snote");
+  var st2 = msgs[3] ? msgs[3].querySelector(".st") : null;   /* 큐에 남은 메시지의 표시 */
+  var badge = prev.querySelector(".pane-list .thread em");   /* 안 읽은 표시 */
+
+  var S_OFFLINE = "\u25cf \uc624\ud504\ub77c\uc778 \u00b7 \ud050 2\uac74";
+  var S_ONLINE = "\u25cf \uc5f0\uacb0\ub428";
+  var S_QUEUED = "\u25f7 \ub300\uae30 \uc911 \u00b7 \ub85c\uceec \ud050";
+  var S_SAVED = "\u2713 \uc11c\ubc84 \uc800\uc7a5 \u00b7 seq 13";
+  var S_NOTE_OFF = "\ud68c\uc120 \ub04a\uae40 09:12 \u2014 \ubcf4\ub0b8 \uba54\uc2dc\uc9c0\ub294 \uae30\uae30\uc5d0 \ubcf4\uad00\ub418\uc5c5\ub2c8\ub2e4";
+  var S_NOTE_ON = "\uc7ac\uc5f0\uacb0 09:14 \u2014 \ubc00\ub9b0 1\uac74\uc744 \uc21c\uc11c\ub300\ub85c \ub2e4\uc2dc \ubcf4\ub0c8\uc2b5\ub2c8\ub2e4";
+
+  var timers = [];
+  var at = function (ms, fn) { timers.push(setTimeout(fn, ms)); };
+
+  function broken() {
+    conn.textContent = S_OFFLINE;
+    prev.classList.remove("live");
+    if (st2) { st2.className = "st w"; st2.textContent = S_QUEUED; }
+    if (snote) snote.textContent = S_NOTE_OFF;
+    if (badge) badge.classList.remove("hid");
+  }
+  function restored() {
+    conn.textContent = S_ONLINE;
+    prev.classList.add("live");
+    if (st2) { st2.className = "st"; st2.textContent = S_SAVED; }
+    if (snote) snote.textContent = S_NOTE_ON;
+    if (badge) badge.classList.add("hid");
+    if (msgs[3]) {                                   /* 방금 저장된 메시지에 짧은 표시 */
+      msgs[3].classList.add("flash");
+      setTimeout(function () { msgs[3].classList.remove("flash"); }, 950);
+    }
+  }
+  function loop() {
+    broken();                                        /* 원래 화면 상태에서 시작 */
+    at(3400, function () {
+      restored();
+      at(4300, loop);
+    });
+  }
+
+  var started = false;
+  function start() { if (!started) { started = true; loop(); } }
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) { if (timers.length) { timers.forEach(clearTimeout); timers = []; } }
+    else if (started) { loop(); }
+  });
+  if ("IntersectionObserver" in window) {
+    var io2 = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) { start(); io2.disconnect(); } });
+    }, { threshold: 0.25 });
+    io2.observe(prev);
+  } else { start(); }
+})();
+</script>
+</body>
+</html>

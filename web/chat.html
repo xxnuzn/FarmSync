@@ -1,0 +1,919 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>대화 — 팜싱크 FarmSync</title>
+<link rel="stylesheet" href="assets/css/app.css?v=22">
+<script src="assets/js/resilient.js?v=22"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="mark" href="/friends">팜싱크</a>
+  <span class="pill" id="mePill">—</span>
+  <button class="lk" id="sideToggle" type="button" title="대화 목록과 접속 상태를 가립니다">◀ 대화 목록</button>
+  <span class="sp"></span>
+  <a class="lk" href="/friends">친구 목록</a>
+  <a class="lk" href="/calendar">캘린더</a>
+  <a class="lk" href="#" id="logout">로그아웃</a>
+</header>
+
+<div class="notice bad" id="notice" style="margin:14px 22px 0"></div>
+
+<div class="chatlayout">
+
+  <!-- 좌: 대화 상대 목록 -->
+  <aside class="side left">
+    <section class="panehalf">
+      <div class="sidehd">대화 <span class="tag" id="threadTag">—</span></div>
+      <div class="threads" id="threads"><div class="empty">불러오는 중…</div></div>
+    </section>
+    <section class="panehalf">
+      <div class="sidehd">접속 상태 <span class="tag" id="onTag">—</span></div>
+      <div class="online-list" id="onlineList"><div class="empty" style="padding:18px">불러오는 중…</div></div>
+    </section>
+  </aside>
+
+  <!-- 가운데: 실제 대화창 -->
+  <section class="chatcol">
+    <div class="chathd">
+      <div>
+        <div class="nm" id="pName">—</div>
+        <div class="sb" id="pSub"></div>
+      </div>
+      <div class="rt">
+        <button class="ositoggle" id="osiToggle" type="button" title="OSI 7계층 실시간 현황">OSI 7계층</button>
+        <span class="statebadge" id="stateBadge" data-state="offline"><span class="d"></span><span id="stateText">연결 중</span></span>
+      </div>
+    </div>
+
+    <div class="stream" id="stream"></div>
+    <button class="jumpdown" id="jumpDown">↓ 맨 아래로</button>
+
+    <div class="composer">
+      <div class="row">
+        <input type="text" id="input" placeholder="메시지를 입력하고 Enter" autocomplete="off">
+        <button class="btn solid" id="sendBtn">전송</button>
+      </div>
+      <div class="tools">
+        <button class="btn line sm" id="cutBtn">회선 끊기</button>
+        <button class="btn line sm" id="retryBtn">큐 재전송</button>
+        <button class="btn line sm" id="resetBtn">로컬 상태 초기화</button>
+        <span class="hint" id="hint">회선이 끊겨도 입력한 메시지는 사라지지 않습니다</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 우: 계층 로그 · 실증 지표 -->
+  <aside class="side right">
+    <div class="osi">
+      <div class="osihd">OSI 7계층 실시간 <span class="live">LIVE</span></div>
+      <div id="ositbl">
+        <div class="osir" data-l="7"><span class="n">7</span><span class="nm">응용</span><span class="v" id="v7">대기 중</span></div>
+        <div class="osir" data-l="6"><span class="n">6</span><span class="nm">표현</span><span class="v" id="v6">대기 중</span></div>
+        <div class="osir" data-l="5"><span class="n">5</span><span class="nm">세션</span><span class="v" id="v5">대기 중</span></div>
+        <div class="osir" data-l="4"><span class="n">4</span><span class="nm">전송</span><span class="v" id="v4">연결 준비</span></div>
+        <div class="osir" data-l="3"><span class="n">3</span><span class="nm">네트워크</span><span class="v" id="v3">확인 중</span></div>
+        <div class="osir" data-l="2"><span class="n">2</span><span class="nm">데이터링크</span><span class="v" id="v2">확인 중</span></div>
+        <div class="osir" data-l="1"><span class="n">1</span><span class="nm">물리</span><span class="v" id="v1">확인 중</span></div>
+      </div>
+      <div class="osift">계층을 클릭하면 아래 로그가 <b>그 계층만</b> 표시됩니다. 다시 누르면 전체로 돌아옵니다.</div>
+    </div>
+
+    <div class="metrics">
+      <div><b class="zero" id="mDup">0</b><span>중복 차단</span></div>
+      <div><b id="mPending">0</b><span>전송 대기</span></div>
+      <div><b id="mSent">0</b><span>서버 저장</span></div>
+      <div><b id="mRecv">0</b><span>수신</span></div>
+      <div><b id="mResync">0</b><span>재동기화</span></div>
+      <div><b id="mResyncMsg">0</b><span>복구 메시지</span></div>
+    </div>
+
+    <div class="card" style="border:0;border-radius:0;border-bottom:1px solid var(--line)">
+      <h2>세션 · 수신 오프셋 <span class="tag">L5</span></h2>
+      <div class="bd"><div class="kv">
+        <div><span class="k">대화방</span><span class="v" id="kConv">—</span></div>
+        <div><span class="k">수신 오프셋</span><span class="v" id="kOffset">seq 0</span></div>
+        <div><span class="k">서버 최신</span><span class="v" id="kLatest">seq 0</span></div>
+        <div><span class="k">전송 방식</span><span class="v">WebSocket over TCP</span></div>
+      </div></div>
+    </div>
+
+    <div class="card" style="border:0;border-radius:0">
+      <h2>계층 로그 <span class="tag" id="logTag">전체</span><span class="logfilter" id="logClear" style="display:none">해제</span></h2>
+      <div class="log" id="log"></div>
+    </div>
+
+    <div class="bd" style="border-top:1px solid var(--line)">
+      <div class="hint" style="margin:0">
+        <b style="color:var(--ink)">왜 4계층만으로는 부족한가</b><br>
+        TCP 는 연결이 살아있는 동안만 재전송합니다. 연결이 끊긴 구간의 메시지는 애플리케이션이
+        직접 큐에 보관하고(L7 응용), 재접속 시 수신 오프셋을 대조해 복구해야 합니다(L5 세션).
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script src="assets/js/storage.js?v=22"></script>
+<script src="assets/js/sync-core.js?v=22"></script>
+<script src="assets/js/net.js?v=22"></script>
+<script>
+(function () {
+  "use strict";
+  var me = null;
+  var partner = null;
+  var conv = null;
+  var notice = document.getElementById("notice");
+  var stream = document.getElementById("stream");
+  var logBox = document.getElementById("log");
+
+  function esc(s) {
+    return (s == null ? "" : String(s)).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function param(k) { return new URLSearchParams(location.search).get(k); }
+  function say(m, good) { notice.textContent = m; notice.className = "notice show " + (good ? "good" : "bad"); }
+  function api(p) { return fetch(p).then(function (r) { return r.json(); }); }
+
+  var LNAME = { 1: "물리", 2: "링크", 3: "네트워크", 4: "전송", 5: "세션", 6: "표현", 7: "응용" };
+  var logFilter = 0;   // 0 = 전체, 그 외 = 해당 계층만
+
+  /* ------------------------------------------------------------ OSI 7계층 실시간 */
+  var LHI = { 4: true, 5: true, 7: true };   // 이 프로젝트의 복구가 직접 일어나는 계층
+
+  function setLayer(l, value, flash) {
+    var v = document.getElementById("v" + l);
+    if (!v) return;
+    var row = v.closest(".osir");
+    if (value != null) v.textContent = value;
+    if (flash) {
+      row.classList.remove("hot");
+      void row.offsetWidth;
+      row.classList.add("hot");
+    }
+    if (LHI[l]) row.classList.add("hi"); else row.classList.remove("hi");
+  }
+
+  function bytes(s) { return new TextEncoder().encode(s).length; }
+
+  // L1 · L2 · L3 의 바탕값 — 브라우저가 알려주는 실제 회선 정보
+  function paintLinkLayers() {
+    var net = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    var st = net && net.effectiveType ? net.effectiveType : "종류 미상";
+    var down = net && net.downlink ? " · 하향 " + net.downlink + "Mbps" : "";
+    setLayer(1, (navigator.onLine ? "온라인" : "오프라인") + " · " + st + down, false);
+    setLayer(2, navigator.onLine ? "무선 링크 유지 · MAC 은 브라우저 비공개" : "링크 끊김", false);
+    setLayer(3, (navigator.onLine ? "서버 라우팅 정상" : "경로 없음") + " · RTT 측정 중", false);
+  }
+  window.addEventListener("online", function () { paintLinkLayers(); addLog("APP", 1, "물리 회선 복구 감지"); });
+  window.addEventListener("offline", function () { paintLinkLayers(); addLog("APP", 1, "물리 회선 단절 감지"); });
+  if (navigator.connection && navigator.connection.addEventListener) {
+    navigator.connection.addEventListener("change", paintLinkLayers);
+  }
+
+  function paintLogTag() {
+    document.getElementById("logTag").textContent = logFilter ? "L" + logFilter + " " + LNAME[logFilter] : "전체";
+    document.getElementById("logClear").style.display = logFilter ? "inline" : "none";
+    Array.prototype.forEach.call(document.querySelectorAll(".osir"), function (r) {
+      r.classList.toggle("act", parseInt(r.dataset.l, 10) === logFilter);
+    });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".osir"), function (r) {
+    r.addEventListener("click", function () {
+      var l = parseInt(r.dataset.l, 10);
+      logFilter = (logFilter === l) ? 0 : l;
+      paintLogTag();
+    });
+  });
+  var clearBtn = document.getElementById("logClear");
+  if (clearBtn) clearBtn.addEventListener("click", function () { logFilter = 0; paintLogTag(); });
+
+  function addLog(src, layer, text) {
+    setLayer(layer, text.slice(0, 46), true);
+    if (logFilter && layer !== logFilter) return;
+    var d = document.createElement("div");
+    d.innerHTML = '<span class="ly" data-l="' + layer + '">L' + layer + " " + LNAME[layer] + '</span><span class="tx"></span>';
+    d.querySelector(".tx").textContent = (src ? "[" + src + "] " : "") + text;
+    logBox.appendChild(d);
+    while (logBox.children.length > 200) logBox.removeChild(logBox.firstChild);
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  /* ------------------------------------------------------------ 상태 배지 */
+  var STATE_TEXT = { offline: "오프라인 · 큐 보존", connecting: "연결 중", syncing: "재동기화 중", online: "온라인" };
+
+  /* ------------------------------------------------------------ 렌더 */
+  /* ------------------------------------------------------------ 접속 상태 */
+  var onlineIds = [];
+  var friends = [];
+  function paintPartnerOnline() {
+    var on = partner && onlineIds.indexOf(partner.id) >= 0;
+    var base = partner.subtitle || partner.login_id || "";
+    document.getElementById("pSub").textContent = base + (on ? "  ·  온라인" : "  ·  오프라인");
+    // 상대가 접속 중이면 '오프라인' 안내는 더 이상 사실이 아니므로 걷어낸다.
+    if (on && initialOfflineNote) dropNote(initialOfflineNote);
+  }
+  function dropNote(text) {
+    sysNotes = sysNotes.filter(function (t) { return t !== text; });
+    if (initialOfflineNote === text) initialOfflineNote = null;
+  }
+  function paintOnlineList() {
+    var box = document.getElementById("onlineList");
+    if (!box || !friends.length) return;
+    box.innerHTML = friends.map(function (f) {
+      var on = onlineIds.indexOf(f.id) >= 0;
+      var cls = f.role === "farmer" ? "farmer" : "buyer";
+      var isMe = String(f.id) === String(me.id);
+      return '<div class="onrow"><div class="av ' + cls + '">' + esc((f.name || "?").slice(0, 1)) + "</div>" +
+        '<div class="nm">' + esc(f.name) + "</div>" +
+        (isMe ? '<span class="me-tag">나</span>' : '<span class="dot' + (on ? " on" : "") + '"></span>') +
+        "</div>";
+    }).join("");
+    var n = friends.filter(function (f) { return onlineIds.indexOf(f.id) >= 0; }).length;
+    document.getElementById("onTag").textContent = n + "명 접속";
+  }
+
+  function paintThreadDots() {
+    Array.prototype.forEach.call(document.querySelectorAll("#threads .thr"), function (a) {
+      var id = parseInt((a.getAttribute("href") || "").split("=")[1], 10);
+      var dot = a.querySelector(".dot");
+      if (dot) dot.className = "dot" + (onlineIds.indexOf(id) >= 0 ? " on" : "");
+    });
+  }
+
+  var sysNotes = [];
+  var lastSnap = null;
+  var initialOfflineNote = null;
+  var readSent = {};
+  var pendingReads = {};   // 연결이 열리기 전에 읽음 처리를 못 보낸 메시지
+  var readTotal = 0;
+
+  function flushReads() {
+    Object.keys(pendingReads).forEach(function (seq) {
+      try {
+        if (window.__core.markRead(parseInt(seq, 10))) delete pendingReads[seq];
+      } catch (e) {}
+    });
+  }
+
+  function drawNote(text) {
+    var d = document.createElement("div");
+    d.className = "day note";
+    d.textContent = text;
+    stream.appendChild(d);
+  }
+  function drawDate(ts) {
+    var d = new Date(msOf(ts));
+    var wd = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
+    var el = document.createElement("div");
+    el.className = "day date";
+    el.textContent = d.getFullYear() + "년 " + (d.getMonth() + 1) + "월 " + d.getDate() + "일 " + wd + "요일";
+    stream.appendChild(el);
+  }
+  // 서버가 초 단위로 준 옛 값도 밀리초로 맞춘다 (1970년으로 보이던 원인)
+  function msOf(ts) {
+    if (!ts) return 0;
+    return ts < 1e11 ? ts * 1000 : ts;
+  }
+  function dayKey(ts) {
+    var d = new Date(msOf(ts));
+    return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
+  }
+  function hhmm(ts) {
+    if (!ts) return "";
+    var d = new Date(msOf(ts));
+    function p(n) { return (n < 10 ? "0" : "") + n; }
+    return p(d.getHours()) + ":" + p(d.getMinutes());
+  }
+
+  /* ------------------------------------------------------ 공동 일정 초대 카드
+     공동 일정은 대화방으로 초대가 오고, 받은 사람이 여기서 수락하면
+     그 순간 자기 캘린더에 들어간다. 보낸 사람에게는 '보냈음'만 보여준다. */
+  function inviteCard(r) {
+    var inv = r.invite || {};
+    var box = document.createElement("div");
+    box.className = "invcard";
+    var when = new Date(msOf(inv.start_ts));
+    var wd = ["일", "월", "화", "수", "목", "금", "토"][when.getDay()];
+    var amIReceiver = String(inv.to_user) === String(me.id);
+    var accepted = inv.status === "accepted";
+
+    var head = document.createElement("div");
+    head.className = "invhd";
+    var badge = amIReceiver ? (accepted ? "수락함" : "받은 초대") : "보냄";
+    var bcls = amIReceiver ? (accepted ? "ok" : "wait") : "sent";
+    head.innerHTML = '<span class="invic">📅</span><span>공동 일정</span>' +
+      '<span class="invbadge ' + bcls + '">' + badge + "</span>";
+    box.appendChild(head);
+
+    var t = document.createElement("div");
+    t.className = "invt";
+    t.textContent = inv.title || r.text;
+    box.appendChild(t);
+
+    var w = document.createElement("div");
+    w.className = "invw";
+    w.textContent = when.getFullYear() + "년 " + (when.getMonth() + 1) + "월 " + when.getDate() + "일 " + wd + "요일 " +
+      hhmm(inv.start_ts) + (inv.note ? " · " + inv.note : "");
+    box.appendChild(w);
+
+    var foot = document.createElement("div");
+    foot.className = "invft";
+    if (!amIReceiver) {
+      foot.innerHTML = '<span class="invmsg ok">✓ 대화방으로 보냈습니다</span>' +
+        '<span class="invsub">상대가 수락하면 상대 캘린더에 등록됩니다</span>';
+    } else if (accepted) {
+      foot.innerHTML = '<span class="invmsg ok">✓ 수락함</span><span class="invsub">내 캘린더에 저장되었습니다</span>';
+    } else {
+      var acc = document.createElement("button");
+      acc.className = "btn solid invbtn";
+      acc.type = "button";
+      acc.textContent = "수락 · 내 캘린더에 저장";
+      acc.addEventListener("click", function () { acceptInvite(inv.invite_id, acc, foot); });
+      foot.appendChild(acc);
+      var sub = document.createElement("span");
+      sub.className = "invsub";
+      sub.textContent = "수락해야 내 캘린더에 들어옵니다";
+      foot.appendChild(sub);
+    }
+    box.appendChild(foot);
+    return box;
+  }
+
+  function acceptInvite(inviteId, btn, foot) {
+    if (!inviteId) return;
+    btn.disabled = true;
+    btn.textContent = "저장 중…";
+    fetch("/api/events/accept", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ invite_id: inviteId })
+    }).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j.ok) {
+        btn.disabled = false; btn.textContent = "다시 시도";
+        say(j.detail || "수락하지 못했습니다", false);
+        return;
+      }
+      // 카드 상태를 즉시 바꾼다 (다음 새로 고침에는 서버 상태로 다시 그려진다)
+      ((lastSnap && lastSnap.inbox) || []).forEach(function (m) {
+        if (m.kind === "event_invite" && m.invite && m.invite.invite_id === inviteId) {
+          m.invite.status = "accepted";
+        }
+      });
+      addLog("APP", 7, "공동 일정 수락 · 캘린더에 저장 요청");
+      render(lastSnap);
+      say("수락했습니다 · 내 캘린더에 저장되었습니다", true);
+      // 셸 안의 캘린더 화면에 알린다 (열려 있으면 다시 불러온다)
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ fs: "calendar-refresh" }, "*");
+        }
+      } catch (e) {}
+    }).catch(function () {
+      btn.disabled = false; btn.textContent = "다시 시도";
+      say("네트워크가 불안합니다 · 잠시 후 다시 시도해 주세요", false);
+    });
+  }
+
+  /* 메시지 하나의 현재 상황 */
+  function statusOf(item, mine) {
+    if (item.duplicate) return { cls: "dup", text: "중복 차단 · 이미 저장됨" };
+    if (item.status === "failed") return { cls: "failed", text: "⚠ 전달 실패 · 큐 재전송으로 다시 시도" };
+    if (item.status === "inflight") return { cls: "inflight", text: "↻ 전송 중…" };
+    if (item.status === "queued") return { cls: "queued", text: "◷ 대기 중 · 로컬 큐 보관" };
+    return { cls: "sent", text: "✓ 서버 저장 · seq " + item.seq + (mine ? "" : "") };
+  }
+
+  function render(snap) {
+    lastSnap = snap;
+
+    document.getElementById("stateBadge").dataset.state = snap.state;
+    document.getElementById("stateText").textContent = STATE_TEXT[snap.state] || snap.state;
+    document.getElementById("kConv").textContent = conv;
+    document.getElementById("kOffset").textContent = "seq " + snap.lastSeq;
+    document.getElementById("kLatest").textContent = "seq " + snap.serverLatest;
+    document.getElementById("mDup").textContent = snap.counters.duplicatesIgnored;
+    document.getElementById("mPending").textContent = snap.pending;
+    document.getElementById("mSent").textContent = snap.counters.sent;
+    document.getElementById("mRecv").textContent = snap.counters.received;
+    document.getElementById("mResync").textContent = snap.counters.resyncs;
+    document.getElementById("mResyncMsg").textContent = snap.counters.resyncMessages;
+
+    stream.innerHTML = "";
+
+    var inInbox = {};
+    snap.inbox.forEach(function (m) { if (m.cid) inInbox[m.cid] = true; });
+
+    var rows = snap.inbox.slice().sort(function (a, b) { return a.seq - b.seq; }).map(function (m) {
+      return {
+        seq: m.seq, cid: m.cid, text: m.text, ts: m.ts,
+        kind: m.kind, ref: m.ref, invite: m.invite,
+        mine: String(m.from) === String(me.id),
+        read: (m.read_by || []).length,
+        total: m.read_total || 0,
+        status: "sent", duplicate: false,
+      };
+    });
+    snap.outbox.forEach(function (it) {
+      if (it.cid && inInbox[it.cid]) return;
+      rows.push({
+        seq: it.seq, cid: it.cid, text: it.text, ts: it.ts, mine: true,
+        read: 0, total: 0, status: it.status, duplicate: !!it.duplicate,
+        pending: true,
+      });
+    });
+    rows.sort(function (a, b) {
+      if (a.pending && !b.pending) return 1;
+      if (!a.pending && b.pending) return -1;
+      return (a.seq || 0) - (b.seq || 0);
+    });
+
+    var today = dayKey(Date.now());
+    var lastDay = null;
+    rows.forEach(function (r) {
+      // 날짜가 바뀌는 지점에 날짜를 가운데 표시한다
+      var dk = dayKey(r.ts) || today;
+      if (dk !== lastDay) { drawDate(r.ts || Date.now()); lastDay = dk; }
+
+      var wrap = document.createElement("div");
+      wrap.className = "line " + (r.mine ? "me" : "them");
+      if (!r.mine) {
+        var w = document.createElement("div");
+        w.className = "who";
+        w.textContent = partner.name + (partner.company ? " · " + partner.company : (partner.farm_name ? " · " + partner.farm_name : ""));
+        wrap.appendChild(w);
+      }
+      var row = document.createElement("div");
+      row.className = "msgrow";
+      if (r.kind === "event_invite" && r.invite) {
+        row.appendChild(inviteCard(r));       // 일정 초대는 카드로 그린다
+      } else {
+        var b = document.createElement("div");
+        b.className = "bubble";
+        b.textContent = r.text;
+        row.appendChild(b);
+      }
+
+      var mc = document.createElement("div");
+      mc.className = "metacol";
+      var meta = document.createElement("div");
+      meta.className = "meta";
+      if (r.mine) {
+        // 읽어야 할 사람 수 — 한 명씩 읽을 때마다 1 씩 줄어들고 0 이면 사라진다
+        var left = r.pending ? 0 : Math.max(0, (r.total || readTotal) - r.read);
+        mc.innerHTML = '<span class="rc' + (left > 0 ? "" : " zero") + '">' + left + '</span>' +
+                       '<span class="tm">' + hhmm(r.ts) + "</span>";
+        var st = r.pending ? statusOf(r, true) : { cls: "sent", text: "✓ 서버 저장 · seq " + r.seq };
+        meta.innerHTML = '<span class="bg ' + st.cls + '">' + st.text + "</span>";
+      } else {
+        mc.innerHTML = '<span class="tm">' + hhmm(r.ts) + "</span>";
+      }
+      row.appendChild(mc);
+      wrap.appendChild(row);
+      if (r.mine) wrap.appendChild(meta);
+      if (r.kind === "event_invite") {
+        wrap.appendChild(document.createElement("div"));   // 카드에는 '＋ 일정' 버튼을 달지 않는다
+      } else {
+        var mact = document.createElement("div");
+        mact.className = "mact";
+        var sb = document.createElement("button");
+        sb.className = "sched";
+        sb.textContent = "＋ 일정";
+        sb.dataset.text = r.text;
+        sb.dataset.ts = r.ts || "";
+        mact.appendChild(sb);
+        wrap.appendChild(mact);
+      }
+      stream.appendChild(wrap);
+
+      // 상대 메시지를 화면에 그렸으면 읽음 처리 (서버가 보낸 사람에게 알린다)
+      if (!r.mine && r.seq && !readSent[r.seq]) {
+        readSent[r.seq] = true;
+        try {
+          if (!window.__core.markRead(r.seq)) pendingReads[r.seq] = true;   // 아직 연결 전이면 보류
+        } catch (e) {}
+      }
+    });
+
+    sysNotes.forEach(drawNote);
+    // 대화창은 항상 맨 아래가 기준 — 새 내용은 아래에 붙고 위로 스크롤해 읽는다
+    pinned = true;
+    stream.scrollTop = stream.scrollHeight;
+    paintJump();
+
+    document.getElementById("hint").textContent =
+      snap.state === "offline" ? "지금은 끊긴 상태입니다 — 입력해도 사라지지 않습니다"
+      : snap.pending > 0 ? "전송 대기 " + snap.pending + "건 · 자동으로 다시 시도합니다"
+      : "회선이 끊겨도 입력한 메시지는 사라지지 않습니다";
+  }
+
+  function wrapEvent(e) {
+    render(e);
+    switch (e.kind) {
+      case "queued":
+        addLog("APP", 7, "'" + e.item.text.slice(0, 26) + "' → SEND 생성 (cid " + e.item.cid.slice(0, 8) + ")");
+        setLayer(6, "JSON · UTF-8 · " + bytes(JSON.stringify(e.item)) + "B", true);
+        break;
+      case "pong": setLayer(3, (navigator.onLine ? "라우팅 정상" : "경로 없음") + " · RTT " + e.rtt + "ms", true); break;
+      case "seed": setLayer(5, "이력 병합 " + e.added + "건 · seq " + (lastSnap ? lastSnap.lastSeq : 0), true); break;
+      case "state":
+        if (e.state === "online") { setLayer(4, "WebSocket 연결됨 · TCP 유지", true); flushReads(); }
+        else if (e.state === "offline") setLayer(4, "TCP 끊김 · 로컬 큐 보존", true);
+        else if (e.state === "connecting") setLayer(4, "TCP 연결 시도 중", true);
+        break;
+      case "flush": addLog("APP", 4, "전송 계층으로 " + e.flushed + "건 송신"); break;
+      case "welcome":
+        onlineIds = (e.online || []).slice();
+        paintPartnerOnline();
+        paintOnlineList();
+        flushReads();
+        addLog("APP", 5, "WELCOME · 서버 최신 seq " + e.serverLatest + " · 접속자 " + onlineIds.length + "명");
+        break;
+      case "sync": addLog("APP", 5, "재동기화 " + e.fromSeq + " → " + e.toSeq + " · 밀린 " + e.added + "건 병합"); break;
+      case "message":
+        addLog("APP", 7, "새 메시지 seq " + e.message.seq + " 표시");
+        setLayer(6, "JSON · UTF-8 · " + bytes(JSON.stringify(e.message)) + "B", true);
+        break;
+      case "failed":
+        addLog("APP", 7, "전달 실패 · " + (e.detail || "서버 응답 없음") + " — 큐에 남아 있습니다");
+        setLayer(7, "전달 실패 · 큐 보존", true);
+        break;
+      case "delivered":
+        addLog("APP", 7, "DELIVERED · 서버가 seq " + e.seq + " 로 저장");
+        setLayer(7, "DELIVERED · 서버 저장 seq " + e.seq, true);
+        setLayer(5, "수신 오프셋 seq " + (lastSnap ? lastSnap.lastSeq : 0) + " · 저장 " + (lastSnap ? lastSnap.counters.sent : 0) + "건", true);
+        break;
+      case "duplicate": addLog("APP", 7, "중복 차단 · 이미 seq " + e.seq + " 로 저장됨 (새로 저장 안 함)"); break;
+      case "layer": addLog("SRV", e.layer, e.text); break;
+      case "presence":
+        var wasOn = onlineIds.indexOf(e.user) >= 0;
+        onlineIds = (e.users || []).slice();
+        paintPartnerOnline();
+        paintThreadDots();
+        paintOnlineList();
+        if (partner && e.user === partner.id && wasOn !== !!e.online) {
+          if (e.online) dropNote(initialOfflineNote);
+          sysNotes.push(e.online
+            ? partner.name + " 님이 다시 접속했습니다"
+            : partner.name + " 님의 회선이 끊겼습니다 · 지금 보내는 메시지는 상대가 접속하면 전달됩니다");
+          render(lastSnap);
+        }
+        addLog("SRV", 5, "접속 상태 갱신 · 온라인 " + onlineIds.length + "명 · 사용자 " + e.user + " " + (e.online ? "접속" : "종료"));
+        break;
+      case "error":
+        addLog("SRV", 7, "오류 " + e.code + " " + e.detail);
+        say("서버가 연결을 거부했습니다 · " + e.code + " — " + e.detail, false);
+        break;
+    }
+  }
+
+  /* ------------------------------------------------------------ 시작 */
+  function boot() {
+    var withId = parseInt(param("with"), 10);
+    if (!withId) { location.href = "/friends"; return; }
+
+    api("/api/conversation?with=" + withId).then(function (j) {
+      if (j.code === "NOT_LOGGED_IN") { location.href = "/login"; return; }
+      if (!j.ok) { say(j.detail || "대화방을 열 수 없습니다", false); return; }
+
+      me = j.me;
+      partner = j.partner;
+      conv = j.conv;
+      readTotal = j.read_total || 0;
+
+      document.getElementById("mePill").textContent = me.role_label;
+      document.getElementById("mePill").className = "pill " + me.role;
+      document.getElementById("pName").textContent = partner.name + " · " + partner.role_label;
+      if (partner.online) onlineIds = [partner.id];
+      paintPartnerOnline();
+      if (!partner.online) {
+        initialOfflineNote = partner.name + " 님은 지금 오프라인입니다 · 보낸 메시지는 상대가 접속하면 전달됩니다";
+        sysNotes.push(initialOfflineNote);
+      }
+
+      addLog("APP", 5, "대화방 " + conv + " 개설 · 상대 " + partner.name);
+
+      var transport = window.FarmSyncNet.createTransport({
+        url: window.FarmSyncNet.wsUrl("/ws"),
+        onLog: function (layer, text) { addLog("APP", layer, text); },
+        onOpen: function () { core.onTransportOpen(); },
+        onMessage: function (m) {
+          // 다른 대화방에서 온 알림이면 현재 대화창에 섞지 않고 목록(미리보기·배지)만 갱신한다
+          if (m && m.type === "MSG" && m.conv && m.conv !== conv) { scheduleThreads(); return; }
+          core.handle(normalize(m));
+          if (m && m.type === "MSG") scheduleThreads();
+        },
+        onClose: function () { core.onTransportClose(); addLog("APP", 4, "전송 연결 종료 — 로컬 큐가 대화를 보존합니다"); }
+      });
+
+      var core = window.FarmSyncCore.createCore({
+        storage: window.FarmSyncStorage.autoStorage(),
+        transport: transport,
+        room: conv,
+        user: String(me.id),
+        onEvent: wrapEvent
+      });
+
+      // 서버 메시지(sender/sender_name)를 동기화 코어 형식(from)으로 맞춘다
+      function normalize(m) {
+        if (!m || typeof m !== "object") return m;
+        if (m.type === "MSG") {
+          return Object.assign({}, m, { from: m.sender, from_name: m.sender_name });
+        }
+        if (m.type === "SYNC" && m.messages) {
+          return Object.assign({}, m, {
+            messages: m.messages.map(function (x) {
+              return Object.assign({}, x, { from: x.sender });
+            })
+          });
+        }
+        return m;
+      }
+
+      window.__core = core;
+      window.__transport = transport;
+
+      // 서버가 준 과거 대화를 먼저 채운다 (새로 열어도 이전 대화가 그대로 보이게).
+      // 서버 레코드는 sender 키를 쓰므로 클라이언트 형식(from)으로 맞춰 넣는다.
+      var history = (j.messages || []).map(function (m) {
+        return Object.assign({}, m, { from: m.from != null ? m.from : m.sender });
+      });
+      var seeded = core.seed(history);
+      addLog("APP", 5, "서버 이력 " + (j.messages || []).length + "건 중 " + seeded + "건 병합");
+
+      // 좌측 사이드바 가리기/보이기 (상태는 브라우저에 기억)
+      var layout = document.querySelector(".chatlayout");
+      var toggle = document.getElementById("sideToggle");
+      function applySide(hidden) {
+        if (window.__EMBED) hidden = true;     // 셸 안에서는 항상 접힌 상태(= 셸 목록 사용)
+        layout.classList.toggle("noside", hidden);
+        toggle.textContent = hidden ? "▶ 대화 목록" : "◀ 대화 목록";
+        try { localStorage.setItem("farmsync.side", hidden ? "hidden" : "shown"); } catch (err) {}
+      }
+      var savedSide = null;
+      try { savedSide = localStorage.getItem("farmsync.side"); } catch (err) {}
+      applySide(savedSide === "hidden");
+      if (!window.__EMBED) {
+        toggle.addEventListener("click", function () {
+          applySide(!layout.classList.contains("noside"));
+        });
+      }
+
+      paintLinkLayers();
+      paintLogTag();
+
+      core.load().then(function () {
+        render(core.snapshot());
+        addLog("APP", 5, "로컬 상태 복원 · 수신 오프셋 seq " + core.snapshot().lastSeq);
+        core.connect();
+        // 셸 안에서는 셸이 목록을 그리므로 자체 목록 조회를 하지 않는다 (불필요한 요청 제거)
+        if (!window.__EMBED) loadThreads();
+        // 네트워크 계층 왕복 시간을 주기적으로 측정한다
+        setInterval(function () { if (transport.isOpen()) core.ping(); }, 10000);
+      });
+
+      /* ---------------- 입력 ---------------- */
+      var input = document.getElementById("input");
+      function submit() {
+        var v = input.value.trim();
+        if (!v) return;
+        core.submit(v);
+        input.value = "";
+        input.focus();
+      }
+      document.getElementById("sendBtn").addEventListener("click", submit);
+      input.addEventListener("keydown", function (e) { if (e.key === "Enter") submit(); });
+
+      document.getElementById("cutBtn").addEventListener("click", function () {
+        var b = this;
+        if (transport.isManualOffline()) {
+          transport.resume();
+          b.textContent = "회선 끊기";
+          addLog("APP", 1, "회선 복구 — 재접속");
+        } else {
+          core.forceOffline();
+          b.textContent = "회선 복구";
+          addLog("APP", 1, "회선 강제 단절 — 메시지는 로컬 큐에 보존됩니다");
+        }
+      });
+      document.getElementById("retryBtn").addEventListener("click", function () {
+        var n = core.retry();
+        addLog("APP", 7, n ? "큐 재전송 " + n + "건 시도" : "재전송할 항목이 없습니다");
+      });
+      document.getElementById("resetBtn").addEventListener("click", function () {
+        core.reset().then(function () {
+          logBox.innerHTML = "";
+          addLog("APP", 7, "로컬 상태 초기화 · 수신 오프셋 0, 큐 비움");
+        });
+      });
+    });
+  }
+
+  /* ------------------------------------------------------------ 좌측 대화 목록 */
+  var threadsTimer = null;
+  function scheduleThreads() {
+    if (threadsTimer) return;
+    threadsTimer = setTimeout(function () { threadsTimer = null; loadThreads(); }, 400);
+  }
+
+  function loadThreads() {
+    api("/api/threads").then(function (j) {
+      if (!j.ok) return;
+      var box = document.getElementById("threads");
+      var list = j.threads || [];
+      friends = list;
+      document.getElementById("threadTag").textContent = list.length + "명";
+      if (!list.length) {
+        box.innerHTML = '<div class="empty"><b>대화가 없습니다</b>친구를 추가하면 여기에 표시됩니다</div>';
+        return;
+      }
+      var online = j.online_ids || [];
+      if (online.length || !onlineIds.length) { onlineIds = online.slice(); paintPartnerOnline(); }
+      box.innerHTML = list.map(function (f) {
+        var on = online.indexOf(f.id) >= 0;
+        var cls = f.role === "farmer" ? "farmer" : "buyer";
+        var active = f.id === partner.id ? " on" : "";
+        var lastLine = f.last_text
+          ? (f.last_mine ? "나: " : "") + f.last_text
+          : (f.subtitle || f.login_id || "");
+        return '<a class="thr' + active + '" href="/chat?with=' + f.id + '">' +
+          '<div class="av ' + cls + '">' + esc((f.name || "?").slice(0, 1)) + '<span class="dot ' + (on ? "on" : "") + '"></span></div>' +
+          '<div class="tx"><div class="nm">' + esc(f.name) + "</div>" +
+          '<div class="pv">' + esc(lastLine) + (f.last_ts ? " · " + hhmm(f.last_ts) : "") + "</div></div>" +
+          (f.unread ? '<span class="un">' + f.unread + "</span>" : "") +
+          "</a>";
+      }).join("");
+      paintOnlineList();
+    });
+  }
+
+  /* ---------------- 맨 아래 기준 / 위로 올려 읽기 ---------------- */
+  var pinned = true;
+  function paintJump() {
+    var near = stream.scrollHeight - stream.scrollTop - stream.clientHeight < 60;
+    pinned = near;
+    document.getElementById("jumpDown").classList.toggle("show", !near);
+  }
+  stream.addEventListener("scroll", paintJump);
+  document.getElementById("jumpDown").addEventListener("click", function () {
+    stream.scrollTop = stream.scrollHeight; paintJump();
+  });
+
+  /* ---------------- 대화 중 바로 캘린더에 저장 ---------------- */
+  var scScope = "shared";
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+  function ymd(d) { return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
+  function setScope(s) {
+    scScope = s;
+    document.getElementById("scPersonal").classList.toggle("on", s === "personal");
+    document.getElementById("scShared").classList.toggle("on", s === "shared");
+  }
+    /* 일정 모달 요소(sc*)는 이 스크립트보다 뒤에 마크업된다. 예전에는 바인딩 시점에
+     아직 DOM 에 없어 null.addEventListener 로 스크립트가 죽었고, 그 뒤의 대화창
+     초기화(스트림 · 서버 이력 · WebSocket 연결)가 통째로 실행되지 않았다. */
+  function schedBind(id, ev, fn) {
+    function attach() { var el = document.getElementById(id); if (el) el.addEventListener(ev, fn); }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", attach);
+    else attach();
+  }
+schedBind("scPersonal", "click", function () { setScope("personal"); });
+  schedBind("scShared", "click", function () { setScope("shared"); });
+  schedBind("scCancel", "click", function () {
+    document.getElementById("schedModal").classList.remove("show");
+  });
+  schedBind("schedModal", "click", function (ev) {
+    if (ev.target === this) this.classList.remove("show");
+  });
+  stream.addEventListener("click", function (ev) {
+    var b = ev.target.closest(".sched");
+    if (!b || !partner) return;
+    var t = b.dataset.text || "";
+    /* 메시지에서 날짜·수량 같은 단서를 찾아 제목을 다듬는다 */
+    document.getElementById("scTitle").value = t.slice(0, 110);
+    document.getElementById("scDate").value = ymd(new Date(Date.now() + 86400000));
+    document.getElementById("e_scTitle").textContent = "";
+    document.getElementById("scPartnerName").textContent = partner.name + " 님과 함께 확인합니다";
+    setScope("shared");
+    document.getElementById("schedModal").classList.add("show");
+  });
+  schedBind("scSave", "click", function () {
+    var title = document.getElementById("scTitle").value.trim();
+    var date = document.getElementById("scDate").value;
+    var time = document.getElementById("scTime").value || "09:00";
+    if (!title) { document.getElementById("e_scTitle").textContent = "제목을 입력하세요"; return; }
+    if (!date) { document.getElementById("e_scTitle").textContent = "날짜를 선택하세요"; return; }
+    var body = {
+      title: title, scope: scScope, start_ts: new Date(date + "T" + time + ":00").getTime(),
+      with: partner.id, note: "대화에서 저장 · " + (partner.name || "")
+    };
+    fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j.ok) { document.getElementById("e_scTitle").textContent = j.detail || "저장하지 못했습니다"; return; }
+        document.getElementById("schedModal").classList.remove("show");
+        say(scScope === "shared" ? partner.name + " 님과 함께 보는 일정으로 저장했습니다" : "내 캘린더에 저장했습니다 (나만 확인)", true);
+        sysNotes.push("일정을 저장했습니다 · " + title.slice(0, 40));
+        render(lastSnap);
+      });
+  });
+
+  document.getElementById("logout").addEventListener("click", function (ev) {
+    ev.preventDefault();
+    fetch("/api/logout", { method: "POST" }).then(function () { location.href = "/"; });
+  });
+
+  boot();
+})();
+</script>
+<div class="modal" id="schedModal">
+  <div class="box">
+    <h3>일정에 저장</h3>
+    <div class="sm">대화 내용을 그대로 제목에 넣었습니다. 날짜와 시간만 정해 주세요.</div>
+    <div class="fld">
+      <label class="f" for="scTitle">제목 <em>*</em></label>
+      <input type="text" id="scTitle">
+      <div class="err" id="e_scTitle"></div>
+    </div>
+    <div class="row2">
+      <div class="fld"><label class="f" for="scDate">날짜 <em>*</em></label><input type="date" id="scDate"></div>
+      <div class="fld"><label class="f" for="scTime">시간</label><input type="time" id="scTime" value="09:00"></div>
+    </div>
+    <div class="fld">
+      <label class="f">공개 범위</label>
+      <div class="roles">
+        <div class="role" id="scPersonal" data-scope="personal"><b>개인 일정</b><span>나만 확인합니다</span></div>
+        <div class="role on" id="scShared" data-scope="shared"><b>대화방 공유</b><span id="scPartnerName">상대와 함께 확인합니다</span></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:6px">
+      <button class="btn solid" id="scSave" style="flex:1">캘린더에 저장</button>
+      <button class="btn line" id="scCancel">닫기</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+/* 앱 셸 안에 끼워 넣을 때(embed=1)는 자체 상단바를 숨긴다 */
+if (location.search.indexOf("embed=1") >= 0) {
+  window.__EMBED = true;                       // 셸(앱 프레임) 안에서 실행 중
+  document.documentElement.classList.add("embedded");
+  var st = document.createElement("style");
+  st.textContent = ".embedded .topbar{display:none}" +
+    ".embedded .chatlayout{height:100vh;grid-template-columns:0 minmax(0,1fr) 344px}";  // 사이드바는 noside 규칙으로 접힌다
+  document.head.appendChild(st);
+  var lay = document.querySelector(".chatlayout");
+  if (lay) lay.classList.add("noside");
+}
+</script>
+
+<script>
+/* 느린 회선에서 화면이 '멈춘 것처럼' 보이지 않게 한다 ------------------------ */
+(function () {
+  var LIMIT = 7000;
+  function mark(el, msg) {
+    if (!el || el.getAttribute("data-slow")) return;
+    el.setAttribute("data-slow", "1");
+    el.innerHTML = msg;
+  }
+  setTimeout(function () {
+    var stalled = false;
+    [].forEach.call(document.querySelectorAll(".empty"), function (el) {
+      if (/불러오는 중/.test(el.textContent || "")) {
+        stalled = true;
+        mark(el, "서버 응답이 늦어지고 있습니다. <a href=\"#\" id=\"slowRetry\"><b>다시 시도</b></a>");
+      }
+    });
+    var r = document.getElementById("slowRetry");
+    if (r) r.addEventListener("click", function (e) { e.preventDefault(); location.reload(); });
+    [].forEach.call(document.querySelectorAll(".state, .pill, .tag, .status, .conn"), function (el) {
+      if (/연결 중/.test((el.textContent || "").trim())) mark(el, "연결 지연 · 새로고침 필요");
+    });
+    if (stalled) console.warn("[farmsync] 초기 데이터 로드가 " + LIMIT + "ms 안에 끝나지 않았습니다");
+  }, LIMIT);
+})();
+</script>
+<script>
+/* 모바일: 좁은 화면에서는 대화 목록을 닫아 두고 서랍으로 열어 쓴다 ---------------- */
+(function () {
+  "use strict";
+  var layout = document.querySelector(".chatlayout");
+  if (!layout) return;
+  function small() { return window.matchMedia("(max-width: 820px)").matches; }
+  if (small()) layout.classList.add("noside");            // 폰에서는 목록을 닫은 채로 시작
+  var osi = document.getElementById("osiToggle");
+  if (osi) osi.addEventListener("click", function () {
+    var open = layout.classList.toggle("osiopen");
+    if (open && small()) layout.classList.add("noside");  // 두 서랍이 겹치지 않게
+    osi.classList.toggle("on", open);
+  });
+  var th = document.getElementById("threads");
+  if (th) th.addEventListener("click", function (ev) {
+    if (small() && ev.target.closest(".thr")) layout.classList.add("noside");
+  });
+})();
+</script>
+</body>
+</html>

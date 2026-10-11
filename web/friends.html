@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>친구 목록 — 팜싱크 FarmSync</title>
+<link rel="stylesheet" href="assets/css/app.css?v=22">
+<script src="assets/js/resilient.js?v=22"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="mark" href="/friends">팜싱크</a>
+  <span class="pill" id="mePill">—</span>
+  <span class="whoami" id="meLine"></span>
+  <span class="sp"></span>
+  <span class="pill" id="presencePill">접속 중 …</span>
+  <a class="lk" href="/calendar">캘린더</a>
+  <a class="lk" href="/">메인</a>
+  <a class="lk" href="#" id="logout">로그아웃</a>
+</header>
+
+<div class="wrap">
+  <div class="notice bad" id="notice"></div>
+
+  <div class="card" style="margin-bottom:18px">
+    <h2>내 정보 <span class="tag" id="meTag"></span></h2>
+    <div class="bd"><div class="kv" id="meInfo"></div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:18px">
+    <h2>상대 찾기 <span class="tag">농장주 · 기업</span></h2>
+    <div class="searchrow">
+      <input type="text" id="q" placeholder="이름 · 농장명 · 기업명 · 지역 · 품목으로 검색">
+      <select id="qRole" style="width:130px">
+        <option value="">전체</option>
+        <option value="farmer">농장주</option>
+        <option value="buyer">기업</option>
+      </select>
+      <button class="btn line sm" id="searchBtn">검색</button>
+    </div>
+    <div class="people" id="searchResults">
+      <div class="empty"><b>상대를 검색해 보세요</b>농장주와 기업이 각각 등록되어 있습니다</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>친구 <span class="tag" id="friendSummary">—</span></h2>
+    <div class="tabs" id="tabs">
+      <button class="tab on" data-tab="all">전체 <span class="n" id="nAll">0</span></button>
+      <button class="tab" data-tab="farmer">농장주 <span class="n" id="nFarmer">0</span></button>
+      <button class="tab" data-tab="buyer">기업 <span class="n" id="nBuyer">0</span></button>
+      <button class="tab" data-tab="incoming">받은 요청 <span class="n" id="nIn">0</span></button>
+      <button class="tab" data-tab="outgoing">보낸 요청 <span class="n" id="nOut">0</span></button>
+    </div>
+    <div class="people" id="friendList">
+      <div class="empty">불러오는 중…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var me = null;
+  var state = { friends: [], incoming: [], outgoing: [], tab: "all", onlineIds: [] };
+  var notice = document.getElementById("notice");
+
+  function esc(s) { return (s == null ? "" : String(s)); }
+  function say(msg, good) {
+    notice.textContent = msg;
+    notice.className = "notice show " + (good ? "good" : "bad");
+  }
+  function clearSay() { notice.classList.remove("show"); }
+  function api(path, opts) {
+    return fetch(path, Object.assign({ headers: { "Content-Type": "application/json" } }, opts || {}))
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); });
+  }
+  function initials(name) { return name ? name.trim().slice(0, 1) : "?"; }
+
+  /* ---------------------------------------------------- 최초 로드 */
+  function boot() {
+    api("/api/friends").then(function (res) {
+      if (res.j.code === "NOT_LOGGED_IN") { location.href = "/login"; return; }
+      if (!res.ok || !res.j.ok) { say("목록을 불러오지 못했습니다"); return; }
+      me = res.j.me;
+      state.friends = res.j.friends || [];
+      state.incoming = res.j.incoming || [];
+      state.outgoing = res.j.outgoing || [];
+      state.onlineIds = res.j.online_ids || [];
+      renderMe(res.j.counts);
+      renderList();
+      openPresence();
+    });
+  }
+
+  function renderMe(counts) {
+    document.getElementById("mePill").textContent = me.role_label;
+    document.getElementById("mePill").className = "pill " + me.role;
+    document.getElementById("meTag").textContent = me.login_id;
+    var rows = [["유형", me.role_label], ["이름", me.name]];
+    if (me.role === "farmer") {
+      rows.push(["농장명", me.farm_name || "-"], ["지역", me.region || "-"],
+                ["주요 품목", me.crops || "-"], ["재배 면적", me.area || "-"]);
+    } else {
+      rows.push(["기업명", me.company || "-"], ["부서", me.dept || "-"], ["직책", me.position || "-"]);
+    }
+    rows.push(["연락처", me.phone || "-"]);
+    document.getElementById("meInfo").innerHTML = rows.map(function (r) {
+      return '<div><span class="k">' + r[0] + '</span><span class="v">' + esc(r[1]) + "</span></div>";
+    }).join("");
+    if (counts) {
+      document.getElementById("friendSummary").textContent =
+        "농장주 " + counts.farmer + " · 기업 " + counts.buyer + " · 접속 중 " + counts.online;
+      document.getElementById("nAll").textContent = state.friends.length;
+      document.getElementById("nFarmer").textContent = counts.farmer;
+      document.getElementById("nBuyer").textContent = counts.buyer;
+    }
+    document.getElementById("nIn").textContent = state.incoming.length;
+    document.getElementById("nOut").textContent = state.outgoing.length;
+  }
+
+  /* ---------------------------------------------------- 목록 렌더 */
+  function personRow(u, actions, statusLabel) {
+    var online = state.onlineIds.indexOf(u.id) >= 0 || u.online;
+    var cls = u.role === "farmer" ? "farmer" : "buyer";
+    return '<div class="person">' +
+      '<div class="av ' + cls + '">' + initials(u.name) + '<span class="dot ' + (online ? "on" : "") + '"></span></div>' +
+      "<div><div class=\"nm\">" + esc(u.name) +
+        '<span class="pill ' + cls + '">' + u.role_label + "</span></div>" +
+        '<div class="sb">' + esc(u.subtitle || u.login_id) + "</div></div>" +
+      '<div class="ac">' + (statusLabel || "") + actions.join("") + "</div></div>";
+  }
+
+  function renderList() {
+    var box = document.getElementById("friendList");
+    var list = state.friends;
+    var html = "";
+    var t = state.tab;
+
+    if (t === "farmer" || t === "buyer") list = list.filter(function (f) { return f.role === t; });
+
+    if (t === "incoming") {
+      if (!state.incoming.length) {
+        box.innerHTML = '<div class="empty"><b>받은 요청이 없습니다</b>상대를 검색해 먼저 요청을 보낼 수 있습니다</div>';
+        return;
+      }
+      box.innerHTML = state.incoming.map(function (u) {
+        return personRow(u, [
+          '<button class="btn solid sm" data-act="accept" data-id="' + u.id + '">수락</button>',
+          '<button class="btn line sm" data-act="reject" data-id="' + u.id + '">거절</button>'
+        ], '<span class="st wait">요청 대기</span>');
+      }).join("");
+      return;
+    }
+    if (t === "outgoing") {
+      if (!state.outgoing.length) {
+        box.innerHTML = '<div class="empty"><b>보낸 요청이 없습니다</b></div>';
+        return;
+      }
+      box.innerHTML = state.outgoing.map(function (u) {
+        return personRow(u, [], '<span class="st wait">수락 대기 중</span>');
+      }).join("");
+      return;
+    }
+
+    if (!list.length) {
+      box.innerHTML = '<div class="empty"><b>친구가 아직 없습니다</b>위에서 상대를 검색해 친구 요청을 보내세요</div>';
+      return;
+    }
+    box.innerHTML = list.map(function (u) {
+      var online = state.onlineIds.indexOf(u.id) >= 0 || u.online;
+      return personRow(u, [
+        '<span class="st ' + (online ? "on" : "off") + '">' + (online ? "온라인" : "오프라인") + "</span>",
+        '<button class="btn solid sm" data-act="chat" data-id="' + u.id + '">대화</button>'
+      ]);
+    }).join("");
+  }
+
+  document.getElementById("tabs").addEventListener("click", function (ev) {
+    var b = ev.target.closest(".tab");
+    if (!b) return;
+    state.tab = b.dataset.tab;
+    Array.prototype.forEach.call(document.querySelectorAll(".tab"), function (x) { x.classList.remove("on"); });
+    b.classList.add("on");
+    renderList();
+  });
+
+  /* ---------------------------------------------------- 액션 */
+  document.addEventListener("click", function (ev) {
+    var b = ev.target.closest("button[data-act]");
+    if (!b) return;
+    var id = parseInt(b.dataset.id, 10);
+    var act = b.dataset.act;
+
+    if (act === "chat") { location.href = "/chat?with=" + id; return; }
+
+    if (act === "request") {
+      b.disabled = true;
+      api("/api/friends/request", { method: "POST", body: JSON.stringify({ user_id: id }) })
+        .then(function (r) {
+          say(r.j.detail || "처리했습니다", true);
+          b.textContent = r.j.result === "accepted" ? "친구" : "요청 보냄";
+          boot();
+        });
+      return;
+    }
+    if (act === "accept") {
+      b.disabled = true;
+      api("/api/friends/accept", { method: "POST", body: JSON.stringify({ user_id: id }) })
+        .then(function (r) { say(r.j.detail || "수락했습니다", true); state.tab = "all";
+          Array.prototype.forEach.call(document.querySelectorAll(".tab"), function (x) { x.classList.toggle("on", x.dataset.tab === "all"); });
+          boot(); });
+      return;
+    }
+    if (act === "reject") {
+      b.disabled = true;
+      api("/api/friends/reject", { method: "POST", body: JSON.stringify({ user_id: id }) })
+        .then(function (r) { say(r.j.detail || "거절했습니다", false); boot(); });
+      return;
+    }
+  });
+
+  /* ---------------------------------------------------- 검색 */
+  function doSearch() {
+    var q = document.getElementById("q").value.trim();
+    var role = document.getElementById("qRole").value;
+    var box = document.getElementById("searchResults");
+    box.innerHTML = '<div class="empty">검색 중…</div>';
+    api("/api/users?role=" + encodeURIComponent(role) + "&q=" + encodeURIComponent(q))
+      .then(function (res) {
+        if (!res.ok || !res.j.ok) { box.innerHTML = '<div class="empty">검색에 실패했습니다</div>'; return; }
+        state.onlineIds = res.j.online_ids || state.onlineIds;
+        var users = res.j.users || [];
+        if (!users.length) {
+          box.innerHTML = '<div class="empty"><b>해당하는 상대가 없습니다</b>다른 조건으로 검색해 보세요</div>';
+          return;
+        }
+        box.innerHTML = users.map(function (u) {
+          var online = u.online;
+          var label = online ? '<span class="st on">온라인</span>' : '<span class="st off">오프라인</span>';
+          var acts = [];
+          if (u.friend_status === "friends") {
+            acts.push('<button class="btn solid sm" data-act="chat" data-id="' + u.id + '">대화</button>');
+          } else if (u.friend_status === "incoming") {
+            acts.push('<button class="btn solid sm" data-act="accept" data-id="' + u.id + '">수락</button>');
+          } else if (u.friend_status === "requested") {
+            label = '<span class="st wait">수락 대기</span>' + label;
+          } else {
+            acts.push('<button class="btn line sm" data-act="request" data-id="' + u.id + '">친구 요청</button>');
+          }
+          return personRow(u, acts, label);
+        }).join("");
+      });
+  }
+  document.getElementById("searchBtn").addEventListener("click", doSearch);
+  document.getElementById("q").addEventListener("keydown", function (e) { if (e.key === "Enter") doSearch(); });
+  document.getElementById("qRole").addEventListener("change", doSearch);
+
+  /* ---------------------------------------------------- 접속 상태 실시간 */
+  function openPresence() {
+    var proto = location.protocol === "https:" ? "wss:" : "ws:";
+    var ws = new WebSocket(proto + "//" + location.host + "/ws");
+    var pill = document.getElementById("presencePill");
+    function send(o) { if (ws.readyState === 1) ws.send(JSON.stringify(o)); }
+
+    ws.onopen = function () {
+      send({ type: "HELLO", conv: "__lobby__", last_seq: 0 });
+    };
+    ws.onmessage = function (ev) {
+      var m;
+      try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (m.type === "WELCOME") {
+        state.onlineIds = m.online_ids || [];
+        pill.textContent = "접속 중 · 온라인 " + state.onlineIds.length + "명";
+        renderList();
+      } else if (m.type === "PRESENCE") {
+        state.onlineIds = m.online_ids || [];
+        pill.textContent = "접속 중 · 온라인 " + state.onlineIds.length + "명";
+        renderList();
+      } else if (m.type === "FRIEND") {
+        say((m.kind === "request" ? m.from_user.name + " 님이 친구 요청을 보냈습니다"
+                                  : m.from_user.name + " 님과 친구가 되었습니다"), true);
+        boot();
+      }
+    };
+    ws.onclose = function () {
+      pill.textContent = "연결 끊김 · 재접속 중";
+      setTimeout(openPresence, 1500);
+    };
+  }
+
+  document.getElementById("logout").addEventListener("click", function (ev) {
+    ev.preventDefault();
+    api("/api/logout", { method: "POST" }).then(function () { location.href = "/"; });
+  });
+
+  boot();
+})();
+</script>
+
+<script>
+/* 친구 목록에 '대화 미리보기 + 안 읽은 메시지 주황 배지' 를 붙인다 */
+(function () {
+  "use strict";
+  var info = {};
+  function ms(x) { return !x ? 0 : (x < 1e11 ? x * 1000 : x); }
+  function hhmm(t) {
+    t = ms(t); if (!t) return "";
+    var d = new Date(t);
+    function p(n) { return (n < 10 ? "0" : "") + n; }
+    return p(d.getHours()) + ":" + p(d.getMinutes());
+  }
+  function apply() {
+    Array.prototype.forEach.call(document.querySelectorAll(".person"), function (el) {
+      // '대화' 버튼(data-act) 또는 /chat?with= 링크 어느 쪽에서든 상대 id 를 읽는다
+      var src = el.querySelector('[data-act="chat"]') || el.querySelector('a[href*="/chat?with="]');
+      if (!src) return;
+      var raw = src.getAttribute("data-id") || (src.getAttribute("href") || "").split("=")[1];
+      var id = parseInt(raw, 10);
+      if (!id) return;
+      var t = info[id];
+      if (!t) return;
+      var sb = el.querySelector(".sb") || el.querySelector(".tx .sb") || el.querySelector("div > .sb");
+      if (sb) {
+        if (!sb.getAttribute("data-orig")) sb.setAttribute("data-orig", sb.textContent);
+        var body = t.last_text ? ((t.last_mine ? "나: " : "") + t.last_text) : sb.getAttribute("data-orig");
+        sb.textContent = body + (t.last_ts ? "  ·  " + hhmm(t.last_ts) : "");
+      }
+      var host = el.querySelector(".ac") || el;
+      var old = el.querySelector(".unbadge");
+      if (t.unread > 0) {
+        if (old) { old.textContent = t.unread; }
+        else {
+          var b = document.createElement("span");
+          b.className = "unbadge";
+          b.textContent = t.unread;
+          host.appendChild(b);
+        }
+      } else if (old) { old.remove(); }
+    });
+  }
+  function load() {
+    fetch("/api/threads").then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.ok) return;
+      info = {};
+      (j.threads || []).forEach(function (t) { info[t.id] = t; });
+      apply();
+    }).catch(function () {});
+  }
+  function start() {
+    // DOM 변경마다 즉시 돌지 않게 묶어서 한 번만 실행 (체감 속도 개선)
+    var pend = null;
+    new MutationObserver(function () {
+      if (pend) return;
+      pend = setTimeout(function () { pend = null; apply(); }, 250);
+    }).observe(document.body, { childList: true, subtree: true });
+    load();
+    setInterval(load, 20000);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
+})();
+</script>
+
+<script>
+/* 앱 셸 안에 끼워 넣을 때(embed=1)는 자체 상단바를 숨긴다 */
+if (location.search.indexOf("embed=1") >= 0) {
+  document.documentElement.classList.add("embedded");
+  var st = document.createElement("style");
+  st.textContent = ".embedded .topbar{display:none}.embedded .chatlayout,.embedded .wrap{height:100vh}" +
+    ".embedded .chatlayout{height:100vh}.embedded .calwrap{padding-top:8px}";
+  document.head.appendChild(st);
+}
+</script>
+
+<script>
+/* 느린 회선에서 화면이 '멈춘 것처럼' 보이지 않게 한다 ------------------------ */
+(function () {
+  var LIMIT = 7000;
+  function mark(el, msg) {
+    if (!el || el.getAttribute("data-slow")) return;
+    el.setAttribute("data-slow", "1");
+    el.innerHTML = msg;
+  }
+  setTimeout(function () {
+    var stalled = false;
+    [].forEach.call(document.querySelectorAll(".empty"), function (el) {
+      if (/불러오는 중/.test(el.textContent || "")) {
+        stalled = true;
+        mark(el, "서버 응답이 늦어지고 있습니다. <a href=\"#\" id=\"slowRetry\"><b>다시 시도</b></a>");
+      }
+    });
+    var r = document.getElementById("slowRetry");
+    if (r) r.addEventListener("click", function (e) { e.preventDefault(); location.reload(); });
+    [].forEach.call(document.querySelectorAll(".state, .pill, .tag, .status, .conn"), function (el) {
+      if (/연결 중/.test((el.textContent || "").trim())) mark(el, "연결 지연 · 새로고침 필요");
+    });
+    if (stalled) console.warn("[farmsync] 초기 데이터 로드가 " + LIMIT + "ms 안에 끝나지 않았습니다");
+  }, LIMIT);
+})();
+</script>
+</body>
+</html>

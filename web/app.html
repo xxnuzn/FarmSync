@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>팜싱크 FarmSync</title>
+<link rel="stylesheet" href="assets/css/app.css?v=22">
+<style>
+  body { height: 100vh; height: 100dvh; overflow: hidden; }
+  .shell { display: grid; grid-template-columns: 216px minmax(0, 1fr); height: 100vh; height: 100dvh; }
+  .navcol { background: var(--pine); color: #eef3ef; display: flex; flex-direction: column; }
+  .navcol .brand { display: flex; align-items: center; gap: 9px; padding: 18px 18px 16px; font-weight: 800; font-size: 17px; letter-spacing: -0.03em; }
+  .navcol .brand i { width: 18px; height: 18px; border-radius: 5px; background: #7bd389; }
+  .navcol .who { padding: 0 18px 16px; font-size: 11.5px; color: #9fb0a6; line-height: 1.6; border-bottom: 1px solid rgba(255,255,255,.09); }
+  .navcol .who b { color: #eef3ef; font-weight: 600; display: block; font-size: 13px; }
+  .navbtn {
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    background: transparent; border: 0; color: #c8d3cc; font-family: inherit; font-size: 14px;
+    padding: 13px 18px; cursor: pointer; border-left: 3px solid transparent;
+  }
+  .navbtn:hover { background: rgba(255,255,255,.06); color: #fff; }
+  .navbtn.on { background: rgba(123,211,137,.13); color: #fff; border-left-color: #7bd389; font-weight: 600; }
+  .navbtn .ic { width: 18px; text-align: center; font-size: 13px; opacity: .85; }
+  .navcol .foot { margin-top: auto; padding: 14px 18px 18px; border-top: 1px solid rgba(255,255,255,.09); }
+  .navcol .foot a { display: block; font-size: 12.5px; color: #9fb0a6; padding: 5px 0; }
+  .navcol .foot a:hover { color: #fff; }
+  .stage { position: relative; min-width: 0; overflow: hidden; background: var(--paper); }
+  .view { position: absolute; inset: 0; display: none; }
+  .view.on { display: block; }
+  iframe.embed { width: 100%; height: 100%; border: 0; display: block; }
+  .chatview { display: grid; grid-template-columns: 276px minmax(0, 1fr); height: 100%; }
+  .chatview .tcol { border-right: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
+  .chatview .tcol .hd { padding: 14px 16px; border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 10.5px; letter-spacing: .13em; text-transform: uppercase; color: var(--ink-3); display: flex; }
+  .chatview .tcol .hd .tag { margin-left: auto; text-transform: none; letter-spacing: .02em; }
+  .tlist { overflow-y: auto; flex: 1; }
+  .trow { display: grid; grid-template-columns: 36px minmax(0,1fr) auto; gap: 11px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--line-soft); cursor: pointer; }
+  .trow:hover { background: #fcfdfb; }
+  .trow.on { background: var(--signal-soft); }
+  .trow .av { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 14px; position: relative; }
+  .trow .av.farmer { background: var(--signal); } .trow .av.buyer { background: #2b5f9e; }
+  .trow .av .dot { position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; border-radius: 50%; background: #c3cbc6; border: 2px solid #fff; }
+  .trow .av .dot.on { background: #2f7d3f; }
+  .trow .nm { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .trow .pv { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .trow .un { background: #e0761d; color: #fff; border-radius: 999px; min-width: 21px; height: 21px; padding: 0 6px; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 11px; font-weight: 600; }
+  .chatview .cframe { min-width: 0; position: relative; }
+  .cph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .cphbox { text-align: center; color: var(--ink-3); font-size: 13px; line-height: 1.7; }
+  .cphbox b { display: block; font-size: 15.5px; color: var(--ink); margin-bottom: 5px; font-weight: 600; }
+  .cph button { margin-top: 14px; }
+  .tlist .tslow { padding: 18px 16px; font-size: 12.5px; color: var(--ink-3); line-height: 1.7; }
+  .tlist .tslow button { margin-top: 9px; }
+
+  /* 모바일에서만 보이는 '대화 목록' 버튼 */
+  .cfab {
+    display: none; position: absolute; left: 11px; bottom: 12px; z-index: 20;
+    align-items: center; gap: 6px; background: var(--pine); color: #fff; border: 0;
+    border-radius: 999px; padding: 10px 15px; font-family: var(--sans); font-size: 12.5px;
+    font-weight: 600; cursor: pointer; box-shadow: 0 10px 24px -10px rgba(20, 38, 29, 0.8);
+  }
+
+  /* ---------- 모바일: 위쪽에 화면, 아래쪽에 탭바 ---------- */
+  @media (max-width: 820px) {
+    .shell {
+      grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto;
+    }
+    /* 탭바가 위쪽 본문 높이를 다 먹지 않도록 자리를 못 박는다 (탭바는 맨 아래) */
+    .stage { grid-row: 1; }
+    .navcol {
+      grid-row: 2; flex-direction: row; align-items: stretch;
+      background: var(--pine); color: #eef3ef;          /* 탭바는 항상 어두운 초록 위에 */
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .navbtn { color: #c8d3cc; }
+    .navbtn.on { color: #fff; }
+    .navcol .brand, .navcol .who, .navcol .foot { display: none; }
+    .navbtn {
+      flex: 1 1 0; flex-direction: column; gap: 3px; justify-content: center;
+      font-size: 10.5px; padding: 9px 2px 8px; border-left: 0; border-top: 3px solid transparent;
+    }
+    .navbtn.on { border-left: 0; border-top-color: #7bd389; }
+    .navbtn .ic { width: auto; font-size: 17px; opacity: 1; }
+
+    /* 대화 목록은 서랍으로 — 대화를 고르면 저절로 닫힌다 */
+    .chatview { grid-template-columns: minmax(0, 1fr); position: relative; overflow: hidden; }
+    .chatview .tcol {
+      position: absolute; inset: 0 auto 0 0; width: min(88%, 340px); z-index: 30;
+      border-right: 1px solid var(--line); box-shadow: 0 24px 60px -18px rgba(20, 38, 29, 0.55);
+      transform: translateX(-101%); transition: transform 0.22s ease;
+    }
+    .chatview .tcol.open { transform: none; }
+    .cfab { display: inline-flex; }
+    .cphbox { padding: 0 20px; }
+  }
+</style>
+<script src="assets/js/resilient.js?v=22"></script>
+</head>
+<body>
+
+<div class="shell">
+  <nav class="navcol">
+    <div class="brand"><i></i>팜싱크</div>
+    <div class="who" id="whoami">불러오는 중…</div>
+    <button class="navbtn on" data-view="friends"><span class="ic">☰</span>친구목록</button>
+    <button class="navbtn" data-view="chat"><span class="ic">💬</span>대화</button>
+    <button class="navbtn" data-view="calendar"><span class="ic">▤</span>캘린더</button>
+    <div class="foot">
+      <a href="/" >← 소개 페이지</a>
+      <a href="#" id="logout">로그아웃</a>
+    </div>
+  </nav>
+
+  <div class="stage">
+    <section class="view on" id="v-friends"><iframe class="embed" id="fFriends" title="친구목록"></iframe></section>
+    <section class="view" id="v-chat">
+      <div class="chatview">
+        <div class="tcol">
+          <div class="hd">대화 <span class="tag" id="tTag">—</span></div>
+          <div class="tlist" id="tList"><div class="empty">불러오는 중…</div></div>
+        </div>
+        <div class="cframe">
+          <button class="cfab" id="tBtn" type="button">☰ 대화 목록</button>
+          <div class="cph" id="cPlace">
+            <div class="cphbox">
+              <b>왼쪽에서 대화를 선택하세요</b>
+              <span>선택한 대화 하나만 이곳에 열립니다.</span>
+            </div>
+          </div>
+          <iframe class="embed" id="fChat" title="대화창" style="display:none"></iframe>
+        </div>
+      </div>
+    </section>
+    <section class="view" id="v-calendar"><iframe class="embed" id="fCal" title="캘린더"></iframe></section>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var loaded = {};
+  var ctx = {};
+  var current = null;
+  var threads = [];
+
+  function api(p) { return fetch(p).then(function (r) { return r.json(); }); }
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function ms(x) { return !x ? 0 : (x < 1e11 ? x * 1000 : x); }
+  function hhmm(t) {
+    t = ms(t); if (!t) return "";
+    var d = new Date(t);
+    return pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+  function esc(s) {
+    return (s == null ? "" : String(s)).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function loadOnce(id, src) {
+    var f = document.getElementById(id);
+    if (!loaded[id]) { f.src = src; loaded[id] = 1; }
+    return f;
+  }
+
+  function paintThreads() {
+    var box = document.getElementById("tList");
+    if (!threads.length) {
+      box.innerHTML = '<div class="empty"><b>대화가 없습니다</b>친구목록에서 친구를 추가하세요</div>';
+      return;
+    }
+    box.innerHTML = threads.map(function (t) {
+      var cls = t.role === "farmer" ? "farmer" : "buyer";
+      var lastLine = t.last_text ? ((t.last_mine ? "나: " : "") + t.last_text) : "아직 대화가 없습니다";
+      return '<div class="trow' + (current === t.id ? " on" : "") + '" data-id="' + t.id + '">' +
+        '<div class="av ' + cls + '">' + esc((t.name || "?").slice(0, 1)) +
+          '<span class="dot' + (t.online ? " on" : "") + '"></span></div>' +
+        '<div><div class="nm">' + esc(t.name) + '</div>' +
+        '<div class="pv">' + esc(lastLine) + (t.last_ts ? " · " + hhmm(t.last_ts) : "") + "</div></div>" +
+        (t.unread ? '<span class="un">' + t.unread + "</span>" : "<span></span>") +
+        "</div>";
+    }).join("");
+  }
+
+  function loadThreads() {
+    return api("/api/threads").then(function (j) {
+      if (!j || !j.ok) {
+        document.getElementById("tList").innerHTML =
+          '<div class="tslow">목록을 불러오지 못했습니다.<br>회선이 느리거나 잠시 끊겼을 수 있습니다.' +
+          '<br><button class="btn line sm" id="tRetry">다시 시도</button></div>';
+        var b = document.getElementById("tRetry");
+        if (b) b.addEventListener("click", function () { document.getElementById("tList").innerHTML = '<div class="empty">불러오는 중…</div>'; loadThreads(); });
+        return;
+      }
+      threads = j.threads || [];
+      document.getElementById("tTag").textContent = threads.length + "명";
+      // 목록이 갱신돼도 사용자가 고른 대화는 그대로 둔다 (자동으로 열지 않는다)
+      var exists = threads.some(function (t) { return t.id === current; });
+      if (!exists) current = null;
+      paintThreads();
+    });
+  }
+
+  function openChat(id) {
+    current = id;
+    var f = document.getElementById("fChat");
+    var src = "/chat?with=" + id + "&embed=1";
+    if (f.getAttribute("src") !== src) f.src = src;   // 선택한 대화만 대화창에 뜬다
+    f.style.display = "block";
+    document.getElementById("cPlace").style.display = "none";
+    var c = tcol(); if (c) c.classList.remove("open");   // 대화를 고르면 서랍을 닫는다
+    paintThreads();
+  }
+
+  function show(view) {
+    Array.prototype.forEach.call(document.querySelectorAll(".navbtn"), function (b) {
+      b.classList.toggle("on", b.dataset.view === view);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll(".view"), function (v) {
+      v.classList.toggle("on", v.id === "v-" + view);
+    });
+    if (view === "friends") loadOnce("fFriends", "/friends?embed=1");
+    if (view === "calendar") loadOnce("fCal", "/calendar?embed=1");
+    if (view === "chat") {
+      var c = tcol();
+      if (c && !current) c.classList.add("open");   // 고른 대화가 없으면 목록부터 보여준다
+      if (!threads.length) loadThreads();
+    }
+    try { location.hash = view; } catch (e) {}
+  }
+
+  document.querySelectorAll(".navbtn").forEach(function (b) {
+    b.addEventListener("click", function () { show(b.dataset.view); });
+  });
+
+  document.getElementById("tList").addEventListener("click", function (ev) {
+    var row = ev.target.closest(".trow");
+    if (row) openChat(parseInt(row.dataset.id, 10));
+  });
+
+  // 모바일: 대화 목록을 서랍처럼 여닫는다
+  function tcol() { return document.querySelector(".chatview .tcol"); }
+  document.getElementById("tBtn").addEventListener("click", function () {
+    var c = tcol(); if (c) c.classList.toggle("open");
+  });
+
+  document.getElementById("logout").addEventListener("click", function (ev) {
+    ev.preventDefault();
+    fetch("/api/logout", { method: "POST" }).then(function () { location.href = "/"; });
+  });
+
+  // 새 메시지·배지를 위해 목록을 주기적으로 갱신한다
+  setInterval(function () { if (document.getElementById("v-chat").classList.contains("on")) loadThreads(); }, 15000);
+  window.addEventListener("message", function (ev) {
+    if (ev.data === "farmsync:changed") { loaded.fFriends = 0; loadThreads(); }
+  });
+
+  api("/api/friends").then(function (j) {
+    if (!j.ok) { if (j.code === "NOT_LOGGED_IN") location.href = "/login"; return; }
+    ctx = j;
+    document.getElementById("whoami").innerHTML =
+      "<b>" + esc(j.me.name) + "</b>" + esc(j.me.role_label) + " · " + esc(j.me.subtitle || "");
+    loadThreads();   // 미리 받아 두면 '대화' 를 눌렀을 때 바로 뜬다
+    var start = (location.hash || "#friends").slice(1);
+    if (["friends", "chat", "calendar"].indexOf(start) < 0) start = "friends";
+    show(start);
+  });
+})();
+</script>
+
+<script>
+/* 느린 회선에서 화면이 '멈춘 것처럼' 보이지 않게 한다 ------------------------ */
+(function () {
+  var LIMIT = 7000;
+  function mark(el, msg) {
+    if (!el || el.getAttribute("data-slow")) return;
+    el.setAttribute("data-slow", "1");
+    el.innerHTML = msg;
+  }
+  setTimeout(function () {
+    var stalled = false;
+    [].forEach.call(document.querySelectorAll(".empty"), function (el) {
+      if (/불러오는 중/.test(el.textContent || "")) {
+        stalled = true;
+        mark(el, "서버 응답이 늦어지고 있습니다. <a href=\"#\" id=\"slowRetry\"><b>다시 시도</b></a>");
+      }
+    });
+    var r = document.getElementById("slowRetry");
+    if (r) r.addEventListener("click", function (e) { e.preventDefault(); location.reload(); });
+    [].forEach.call(document.querySelectorAll(".state, .pill, .tag, .status, .conn"), function (el) {
+      if (/연결 중/.test((el.textContent || "").trim())) mark(el, "연결 지연 · 새로고침 필요");
+    });
+    if (stalled) console.warn("[farmsync] 초기 데이터 로드가 " + LIMIT + "ms 안에 끝나지 않았습니다");
+  }, LIMIT);
+})();
+</script>
+</body>
+</html>
