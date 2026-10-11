@@ -279,3 +279,6 @@ farmsync/
 ## 라이선스
 
 MIT
+
+---
+https://8000-sbx-fd5950ebdb880146ba7f581e4b54475e.sandbox.westus2-prod.sspark.ai
